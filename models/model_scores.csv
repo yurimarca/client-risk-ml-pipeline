@@ -1,0 +1,2 @@
+timestamp,f1_score,model_type,dataset
+2025-04-05T23:24:45.447325,0.5714285714285715,trained,testdata.csv

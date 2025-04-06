@@ -145,12 +145,29 @@ def score_redeployed_model():
     accuracy = metrics.accuracy_score(y_test, y_pred)
     precision = metrics.precision_score(y_test, y_pred)
     recall = metrics.recall_score(y_test, y_pred)
+    roc_auc = metrics.roc_auc_score(y_test, y_pred)
     
-    print(f"\nRedeployed Model Metrics:")
+    # Save detailed metrics to CSV
+    timestamp = datetime.now().isoformat()
+    df_metrics = pd.DataFrame({
+        'timestamp': [timestamp],
+        'f1_score': [f1_score],
+        'accuracy': [accuracy],
+        'precision': [precision],
+        'recall': [recall],
+        'roc_auc': [roc_auc],
+        'model_type': ['redeployed']
+    })
+    
+    metrics_file = os.path.join(model_path, 'detailed_metrics.csv')
+    df_metrics.to_csv(metrics_file, mode='a', header=not os.path.exists(metrics_file), index=False)
+    
+    print("\nRedeployed Model Metrics:")
     print(f"F1 Score: {f1_score:.4f}")
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
+    print(f"ROC AUC: {roc_auc:.4f}")
 
 
 if __name__ == '__main__':

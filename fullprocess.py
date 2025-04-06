@@ -105,6 +105,10 @@ def main():
         # Deploy the new model
         print("\nDeploying new model...")
         deployment.store_model_into_pickle()
+        
+        # Score the redeployed model
+        print("\nScoring redeployed model...")
+        reporting.score_redeployed_model()
     else:
         print("No new data found. Checking for model drift...")
     
@@ -122,6 +126,10 @@ def main():
         
         # Deploy the new model
         deployment.store_model_into_pickle()
+        
+        # Score the redeployed model
+        print("\nScoring redeployed model...")
+        reporting.score_redeployed_model()
     else:
         print("No model drift detected.")
     
@@ -132,7 +140,7 @@ def main():
     diagnostics.missing_data()
     diagnostics.execution_time()
     diagnostics.outdated_packages_list()
-    diagnostics.data_drift_check()  # Add data drift check
+    diagnostics.data_drift_check()
     
     print("\nGenerating reports...")
     reporting.score_model()
