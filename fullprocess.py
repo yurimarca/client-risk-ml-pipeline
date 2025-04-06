@@ -46,33 +46,39 @@ def check_for_new_data():
     
     if new_files:
         print(f"Found {len(new_files)} new file(s) to ingest: {new_files}")
+        return True
     else:
         print("No new files found.")
-    
-    return len(new_files) > 0
+        return False
 
 def check_for_model_drift():
-    """Check if the model performance has degraded."""
+    """Check if the model performance has degraded on newly ingested data."""
     # Get the current score from the deployed model
     with open(os.path.join(prod_deployment_path, 'latestscore.txt'), 'r') as f:
         current_score = float(f.read())
     print(f"Current model score: {current_score}")
     
-    # Train a new model with the current data
-    print("\nTraining new model for drift detection...")
-    new_model = training.train_model()
+    # Load newly ingested data
+    new_data_path = os.path.join(output_folder_path, 'finaldata.csv')
+    if not os.path.exists(new_data_path):
+        print("No new data found for drift detection")
+        return False
+        
+    # Score the deployed model on new data
+    new_score = scoring.score_model(use_deployed_model=True, dataset_path=new_data_path)
+    print(f"Deployed model score on new data: {new_score}")
     
-    # Score the new model on test data
-    new_score = scoring.score_model(use_deployed_model=False)
-    print(f"New model score on test data: {new_score}")
+    # Get drift threshold from config
+    drift_threshold = config.get('drift_threshold', 0.05)
+    score_difference = current_score - new_score
     
-    # Compare scores
-    if new_score < current_score:
-        print(f"Model drift detected! New model performs worse: {new_score} < {current_score}")
+    # Compare scores - drift detected if performance degrades beyond threshold
+    if score_difference > drift_threshold:
+        print(f"Model drift detected! Performance degraded by {score_difference:.4f} (threshold: {drift_threshold})")
         print("This indicates the model's performance has degraded with the new data.")
         return True
     else:
-        print(f"No model drift detected. New model performs better or equal: {new_score} >= {current_score}")
+        print(f"No model drift detected. Performance difference: {score_difference:.4f} (threshold: {drift_threshold})")
         print("This indicates the model is still performing well with the new data.")
         return False
 
@@ -126,6 +132,7 @@ def main():
     diagnostics.missing_data()
     diagnostics.execution_time()
     diagnostics.outdated_packages_list()
+    diagnostics.data_drift_check()  # Add data drift check
     
     print("\nGenerating reports...")
     reporting.score_model()

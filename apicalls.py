@@ -87,8 +87,28 @@ def main():
     
     print("\nAll results saved to apireturns.txt")
 
+def test_redeployed_model():
+    """Test all API endpoints with redeployed model and save combined results"""
+    # First, ensure the model is redeployed
+    import deployment
+    deployment.store_model_into_pickle()
+    
+    results = {
+        'predictions': test_prediction(),
+        'scoring': test_scoring(),
+        'summary_stats': test_summary_stats(),
+        'diagnostics': test_diagnostics()
+    }
+    
+    # Save combined results to a file
+    with open('apireturns2.txt', 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    print("\nAll results for redeployed model saved to apireturns2.txt")
+
 if __name__ == '__main__':
     main()
+    test_redeployed_model()
 
 
 

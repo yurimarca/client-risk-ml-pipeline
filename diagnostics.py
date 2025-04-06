@@ -6,6 +6,7 @@ import json
 import pickle
 import subprocess
 from datetime import datetime
+from scipy.stats import ks_2samp
 
 ##################Load config.json and get environment variables
 with open('config.json','r') as f:
@@ -99,6 +100,50 @@ def outdated_packages_list():
     
     return package_info
 
+def data_drift_check():
+    """Check for data drift between the last ingested data and the current data."""
+    # Get the paths
+    current_data_path = os.path.join(dataset_csv_path, 'finaldata.csv')
+    prod_data_path = os.path.join(prod_deployment_path, 'finaldata.csv')
+    
+    if not os.path.exists(prod_data_path):
+        print("No previous data found for drift comparison")
+        return None
+    
+    # Read the datasets
+    df_current = pd.read_csv(current_data_path)
+    df_prod = pd.read_csv(prod_data_path)
+    
+    # Get numeric columns
+    numeric_cols = df_current.select_dtypes(include=[np.number]).columns
+    
+    # Initialize drift report
+    drift_report = {}
+    
+    # Compare distributions for each numeric column
+    for col in numeric_cols:
+        if col in df_prod.columns:
+            stat, p_value = ks_2samp(df_prod[col], df_current[col])
+            drift_report[col] = {
+                'statistic': stat,
+                'p_value': p_value,
+                'drifted': p_value < 0.05
+            }
+    
+    # Save drift report to CSV
+    timestamp = datetime.now().isoformat()
+    df_drift = pd.DataFrame({
+        'timestamp': [timestamp],
+        'column': list(drift_report.keys()),
+        'statistic': [drift_report[col]['statistic'] for col in drift_report],
+        'p_value': [drift_report[col]['p_value'] for col in drift_report],
+        'drifted': [drift_report[col]['drifted'] for col in drift_report]
+    })
+    
+    drift_file = os.path.join(dataset_csv_path, 'data_drift.csv')
+    df_drift.to_csv(drift_file, mode='a', header=not os.path.exists(drift_file), index=False)
+    
+    return drift_report
 
 if __name__ == '__main__':
     # Test predictions

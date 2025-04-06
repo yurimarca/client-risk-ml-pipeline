@@ -7,6 +7,7 @@ from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 import json
+from datetime import datetime
 
 
 
@@ -55,7 +56,19 @@ def score_model(use_deployed_model=False, dataset_path=None):
     # Calculate F1 score
     f1_score = metrics.f1_score(y, y_pred)
     
-    # Save the score only if using the trained model
+    # Save the score with timestamp to CSV
+    timestamp = datetime.now().isoformat()
+    df_scores = pd.DataFrame({
+        'timestamp': [timestamp],
+        'f1_score': [f1_score],
+        'model_type': ['deployed' if use_deployed_model else 'trained'],
+        'dataset': [os.path.basename(dataset_path) if dataset_path else 'testdata.csv']
+    })
+    
+    scores_file = os.path.join(model_path, 'model_scores.csv')
+    df_scores.to_csv(scores_file, mode='a', header=not os.path.exists(scores_file), index=False)
+    
+    # Also save the latest score to txt for backward compatibility
     if not use_deployed_model:
         with open(os.path.join(model_path, 'latestscore.txt'), 'w') as f:
             f.write(str(f1_score))

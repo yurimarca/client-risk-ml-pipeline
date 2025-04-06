@@ -16,29 +16,33 @@ This project implements a dynamic risk assessment system that:
 The pipeline consists of five main components:
 
 1. **Data Ingestion**
-   - Automatically detects and processes new data files
-   - Compiles datasets into a master training dataset
-   - Maintains records of ingested files
+   - Automatically detects and processes new data files from `/sourcedata/`
+   - Compiles datasets into a master training dataset (`finaldata.csv`)
+   - Maintains records of ingested files (`ingestedfiles.txt`)
 
 2. **Model Training & Deployment**
    - Trains logistic regression models for risk prediction
    - Scores models using F1 metric
    - Deploys models to production when performance improves
+   - Automatically detects model drift and triggers retraining
 
 3. **Diagnostics**
    - Monitors data quality and model performance
    - Tracks execution times for key processes
    - Checks for dependency updates
+   - Provides comprehensive system diagnostics
 
 4. **Reporting**
-   - Generates confusion matrix visualizations
+   - Generates confusion matrix visualizations (`confusionmatrix.png`)
    - Provides API endpoints for predictions and diagnostics
    - Creates comprehensive model reports
+   - Logs all API responses (`apireturns.txt`)
 
 5. **Process Automation**
-   - Automatically checks for new data
-   - Monitors for model drift
+   - Automatically checks for new data every 3 minutes
+   - Monitors for model drift using test data
    - Triggers retraining and redeployment when needed
+   - Maintains detailed logs of all operations (`cron.log`)
 
 ## Project Structure
 
@@ -46,6 +50,8 @@ The pipeline consists of five main components:
 client-risk-ml-pipeline/
 ├── config.json              # Configuration settings
 ├── requirements.txt         # Python dependencies
+├── setup_cron.sh           # Cron job setup script
+├── cronjob.txt             # Cron job configuration
 ├── ingestion.py            # Data ingestion script
 ├── training.py             # Model training script
 ├── scoring.py              # Model scoring script
@@ -60,11 +66,11 @@ client-risk-ml-pipeline/
 
 ## Key Directories
 
-- `/sourcedata/` - Source data for model training
-- `/ingesteddata/` - Processed and compiled datasets
-- `/models/` - Trained models and scores
-- `/production_deployment/` - Production-ready models
-- `/testdata/` - Test datasets
+- `/sourcedata/` - Source data for model training (dataset3.csv, dataset4.csv)
+- `/ingesteddata/` - Processed and compiled datasets (finaldata.csv)
+- `/models/` - Trained models and scores (trainedmodel.pkl, latestscore.txt)
+- `/production_deployment/` - Production-ready models and records
+- `/testdata/` - Test datasets for model evaluation
 
 ## Setup and Usage
 
@@ -74,18 +80,28 @@ client-risk-ml-pipeline/
    ```
 
 2. Configure paths in `config.json`:
-   - `input_folder_path`: Source data directory
-   - `output_folder_path`: Processed data directory
-   - `test_data_path`: Test data directory
-   - `output_model_path`: Model storage directory
-   - `prod_deployment_path`: Production deployment directory
+   ```json
+   {
+     "input_folder_path": "sourcedata",
+     "output_folder_path": "ingesteddata",
+     "test_data_path": "testdata",
+     "output_model_path": "models",
+     "prod_deployment_path": "production_deployment"
+   }
+   ```
 
-3. Run the full pipeline:
+3. Set up the cron job:
+   ```bash
+   chmod +x setup_cron.sh
+   ./setup_cron.sh
+   ```
+
+4. Run the full pipeline manually:
    ```bash
    python fullprocess.py
    ```
 
-4. Access API endpoints:
+5. Access API endpoints:
    - `/prediction` - Get model predictions
    - `/scoring` - Get model scores
    - `/summarystats` - Get data statistics
@@ -93,11 +109,22 @@ client-risk-ml-pipeline/
 
 ## Automation
 
-The system runs automatically every 10 minutes via cron job to:
-- Check for new data
-- Monitor model performance
-- Retrain and redeploy models when needed
-- Generate updated reports
+The system runs automatically every 3 minutes via cron job to:
+- Check for new data in `/sourcedata/`
+- Monitor model performance using test data
+- Retrain and redeploy models when drift is detected
+- Generate updated reports and diagnostics
+
+The cron job is configured in `cronjob.txt` and can be set up using `setup_cron.sh`.
+
+## Monitoring
+
+The system maintains several log files:
+- `cron.log` - Detailed logs of automated runs
+- `apireturns.txt` - API response logs for the current model
+- `apireturns2.txt` - API response logs for the redeployed model
+- `confusionmatrix.png` - Model performance visualization for the current model
+- `confusionmatrix2.png` - Model performance visualization for the redeployed model
 
 ## License
 
