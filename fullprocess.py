@@ -58,17 +58,21 @@ def check_for_model_drift():
         current_score = float(f.read())
     print(f"Current model score: {current_score}")
     
-    # Score the deployed model on test data
-    new_score = scoring.score_model(use_deployed_model=True)
-    print(f"Model score on test data: {new_score}")
+    # Train a new model with the current data
+    print("\nTraining new model for drift detection...")
+    new_model = training.train_model()
+    
+    # Score the new model on test data
+    new_score = scoring.score_model(use_deployed_model=False)
+    print(f"New model score on test data: {new_score}")
     
     # Compare scores
     if new_score < current_score:
-        print(f"Model drift detected! Score decreased from {current_score} to {new_score}")
+        print(f"Model drift detected! New model performs worse: {new_score} < {current_score}")
         print("This indicates the model's performance has degraded with the new data.")
         return True
     else:
-        print(f"No model drift detected. Score maintained or improved from {current_score} to {new_score}")
+        print(f"No model drift detected. New model performs better or equal: {new_score} >= {current_score}")
         print("This indicates the model is still performing well with the new data.")
         return False
 
@@ -79,35 +83,43 @@ def main():
     print("\nChecking for new data...")
     has_new_data = check_for_new_data()
     
-    if not has_new_data:
-        print("No new data found. Process ending.")
-        return
-    
-    print("New data found. Proceeding with ingestion...")
-    # Run ingestion
-    subprocess.run(['python', 'ingestion.py'], check=True)
+    if has_new_data:
+        print("New data found. Proceeding with ingestion and retraining...")
+        # Run ingestion
+        subprocess.run(['python', 'ingestion.py'], check=True)
+        
+        # Retrain the model with new data
+        print("\nRetraining model with new data...")
+        training.train_model()
+        
+        # Score the new model
+        print("\nScoring new model...")
+        scoring.score_model()
+        
+        # Deploy the new model
+        print("\nDeploying new model...")
+        deployment.store_model_into_pickle()
+    else:
+        print("No new data found. Checking for model drift...")
     
     # Step 2: Check for model drift
     print("\nChecking for model drift...")
     has_drift = check_for_model_drift()
     
-    if not has_drift:
-        print("No model drift detected. Process ending.")
-        return
+    if has_drift:
+        print("Model drift detected. Retraining model...")
+        # Retrain the model
+        training.train_model()
+        
+        # Score the new model
+        scoring.score_model()
+        
+        # Deploy the new model
+        deployment.store_model_into_pickle()
+    else:
+        print("No model drift detected.")
     
-    print("Model drift detected. Proceeding with retraining and redeployment...")
-    
-    # Step 3: Retrain and redeploy
-    print("\nRetraining model...")
-    training.train_model()
-    
-    print("\nScoring new model...")
-    scoring.score_model()
-    
-    print("\nDeploying new model...")
-    deployment.store_model_into_pickle()
-    
-    # Step 4: Run diagnostics and reporting
+    # Step 3: Run diagnostics and reporting
     print("\nRunning diagnostics...")
     diagnostics.model_predictions(os.path.join('testdata', 'testdata.csv'))
     diagnostics.dataframe_summary()
@@ -122,10 +134,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
 
 

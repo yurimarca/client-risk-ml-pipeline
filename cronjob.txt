@@ -1,0 +1,1 @@
+*/3 * * * * export PYENV_ROOT="/home/yurimarca/.pyenv"; export PATH="$PYENV_ROOT/bin:$PATH"; eval "$(pyenv init --path)"; eval "$(pyenv init -)"; cd /home/yurimarca/Code/client-risk-ml-pipeline && pyenv shell myenv && python fullprocess.py >> /home/yurimarca/Code/client-risk-ml-pipeline/cron.log 2>&1 
