@@ -2,13 +2,10 @@ from flask import Flask, session, jsonify, request
 import pandas as pd
 import numpy as np
 import pickle
-import create_prediction_model
-import diagnosis 
-import predict_exited_from_saved_model
 import json
 import os
-
-
+import diagnostics
+import reporting
 
 ######################Set up variables for use in our script
 app = Flask(__name__)
@@ -18,33 +15,67 @@ with open('config.json','r') as f:
     config = json.load(f) 
 
 dataset_csv_path = os.path.join(config['output_folder_path']) 
-
-prediction_model = None
-
+test_data_path = os.path.join(config['test_data_path'])
+model_path = os.path.join(config['output_model_path'])
+prod_deployment_path = os.path.join(config['prod_deployment_path'])
 
 #######################Prediction Endpoint
 @app.route("/prediction", methods=['POST','OPTIONS'])
 def predict():        
-    #call the prediction function you created in Step 3
-    return #add return value for prediction outputs
+    # Get the file path from the request
+    file_path = request.json.get('filepath')
+    if not file_path:
+        return jsonify({'error': 'No file path provided'}), 400
+    
+    try:
+        # Make predictions using the diagnostics module
+        predictions = diagnostics.model_predictions(file_path)
+        return jsonify({'predictions': predictions}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 #######################Scoring Endpoint
 @app.route("/scoring", methods=['GET','OPTIONS'])
-def stats():        
-    #check the score of the deployed model
-    return #add return value (a single F1 score number)
+def scoring():        
+    # Get the F1 score from the latestscore.txt file
+    try:
+        with open(os.path.join(prod_deployment_path, 'latestscore.txt'), 'r') as f:
+            score = float(f.read())
+        return jsonify({'f1_score': score}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 #######################Summary Statistics Endpoint
 @app.route("/summarystats", methods=['GET','OPTIONS'])
-def stats():        
-    #check means, medians, and modes for each column
-    return #return a list of all calculated summary statistics
+def summary_stats():        
+    # Get summary statistics using the diagnostics module
+    try:
+        stats = diagnostics.dataframe_summary()
+        return jsonify({'summary_statistics': stats}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 #######################Diagnostics Endpoint
 @app.route("/diagnostics", methods=['GET','OPTIONS'])
-def stats():        
-    #check timing and percent NA values
-    return #add return value for all diagnostics
+def diagnostics_endpoint():        
+    # Get all diagnostics
+    try:
+        # Get execution times
+        times = diagnostics.execution_time()
+        
+        # Get missing data percentages
+        missing_data = diagnostics.missing_data()
+        
+        # Get outdated packages
+        packages = diagnostics.outdated_packages_list()
+        
+        return jsonify({
+            'execution_times': times,
+            'missing_data_percentages': missing_data,
+            'outdated_packages': packages
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == "__main__":    
     app.run(host='0.0.0.0', port=8000, debug=True, threaded=True)
